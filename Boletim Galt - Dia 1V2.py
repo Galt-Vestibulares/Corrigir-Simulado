@@ -1,6 +1,3 @@
-#Feito por Lucas Heler(Akaeboshi), em algum dia de junho de 2023
-#Qualquer duvidas só mandar mensagem, mesmo se eu tiver saido do Galt - 61 991152252
-
 import pandas as pd
 
 # Função para verificar se uma resposta está correta
@@ -18,32 +15,16 @@ def verificar_resposta(resposta_aluno, gabarito):
 
 # Corrigir questões de língua estrangeira (Dia 1)
 def corrigir_lingua_estrangeira(dia1_df, gabarito_df):
-    """
-    Corrige as questões de língua estrangeira do Dia 1.
-    :param dia1_df: DataFrame com as respostas dos alunos
-    :param gabarito_df: DataFrame com o gabarito das questões
-    :return: DataFrame com os resultados da correção
-    """
     resultado_df = pd.DataFrame(columns=colunas_resultado)
     questoes_lingua_estrangeira = [f"Item {i}I" for i in range(1, 6)]
 
-    # Percorre cada linha do DataFrame "dia1_df"
     for index, row in dia1_df.iterrows():
-        # Extrai a matrícula do aluno da coluna "Qual seu número de matrícula?"
         matricula = row["Qual seu número de matrícula?"]
-
-        # Extrai a turma
         turma = row["Qual sua turma?"]
-        
-        # Cria uma lista com as respostas do aluno para as questões de língua estrangeira (Item 1I a Item 5I)
-        resposta_aluno = row["Item 1E":"Item 90"].values.tolist()
-        
-
-        # Verifica a opção de língua estrangeira escolhida pelo aluno
+        resposta_aluno = row["Item 1I":"Item 90"].values.tolist()
         opcao = row["Qual sua opção de língua estrangeira?"]
-        
-        prova = ""
 
+        prova = ""
         if opcao.lower() == "inglês":
             prova = "Inglês"
             gabarito_questoes = questoes_lingua_estrangeira
@@ -53,25 +34,21 @@ def corrigir_lingua_estrangeira(dia1_df, gabarito_df):
         else:
             gabarito_questoes = [f"Item {i}" for i in range(6, 91)]
 
-        # Percorre as questões do aluno
         for i, gabarito_questao in enumerate(gabarito_questoes):
             resposta = resposta_aluno[i]
             
             if gabarito_questao in questoes_lingua_estrangeira:
                 # Obtém o gabarito da questão de língua estrangeira
-                gabarito = gabarito_df.loc[gabarito_df["Questão"] == gabarito_questao]["Gabarito"].values
+                gabarito_row = gabarito_df.loc[gabarito_df["Questão"] == gabarito_questao]
+                gabarito = gabarito_row["Gabarito"].values[0] if not gabarito_row.empty else ""
             else:
                 # Obtém o gabarito das outras questões
                 col_index = gabarito_questoes.index(gabarito_questao) + 1
-                gabarito = gabarito_df.iloc[:, col_index].values
-            
-            if len(gabarito) > 0:
-                # Verifica se a resposta está correta comparando com o gabarito
-                resultado = verificar_resposta(resposta, gabarito[0])
-                
-                # Adiciona os resultados ao DataFrame final
-                resultado_df.loc[len(resultado_df)] = [matricula, resposta, gabarito_questao,
-                                                       gabarito[0], turma, prova, resultado, 1 - resultado]
+                gabarito = gabarito_df.iloc[:, col_index].values[0] if col_index < len(gabarito_df.columns) else ""
+
+            resultado = verificar_resposta(resposta, gabarito)
+            resultado_df.loc[len(resultado_df)] = [matricula, resposta, gabarito_questao,
+                                        gabarito, turma, prova, '', resultado, 1 - resultado]
     
     return resultado_df
 
@@ -95,22 +72,22 @@ def corrigir_questoes_6_a_90(dia1_df, gabarito_df):
         resposta_aluno = row["Item 6":"Item 90"].values.tolist()
 
         # Percorre as questões do aluno de 6 a 90
-    for i in range(6, 91):
-        resposta = resposta_aluno[i - 6]
-    
-    # Obtém a linha correspondente ao gabarito da questão
-    gabarito_row = gabarito_df.loc[gabarito_df["Questão"] == i]
-
-    if not gabarito_row.empty:
-        # Extrai as informações do gabarito
-        gabarito = gabarito_row["Gabarito"].values[0]
-        tema = gabarito_row["Tema"].values[0]
-
-        # Verifica se a resposta está correta comparando com o gabarito
-        resultado = verificar_resposta(resposta, gabarito)
+        for i in range(6, 91):
+            resposta = resposta_aluno[i - 6]
         
-        # Adiciona os resultados ao DataFrame final
-        resultado_df.loc[len(resultado_df)] = [matricula, resposta, i, gabarito, tema, '', '', resultado, 1 - resultado]
+            # Obtém a linha correspondente ao gabarito da questão
+            gabarito_row = gabarito_df.loc[gabarito_df["Questão"] == i]
+
+            if not gabarito_row.empty:
+                # Extrai as informações do gabarito
+                gabarito = gabarito_row["Gabarito"].values[0]
+                tema = gabarito_row["Tema"].values[0]
+
+                # Verifica se a resposta está correta comparando com o gabarito
+                resultado = verificar_resposta(resposta, gabarito)
+                
+                # Adiciona os resultados ao DataFrame final
+                resultado_df.loc[len(resultado_df)] = [matricula, resposta, i, gabarito, tema, '', '', resultado, 1 - resultado]
 
     return resultado_df
 
@@ -130,7 +107,7 @@ resultado_lingua_estrangeira = corrigir_lingua_estrangeira(dia1_df, gabarito_df)
 resultado_questoes_6_a_90 = corrigir_questoes_6_a_90(dia1_df, gabarito_df)
 
 # Concatenar os resultados
-resultado_final = pd.concat([resultado_lingua_estrangeira, resultado_questoes_6_a_90])
+resultado_final = pd.concat([resultado_lingua_estrangeira, resultado_questoes_6_a_90], ignore_index=True)
 
 # Salvar o resultado final em um único arquivo Excel
 resultado_final.to_excel("Resultado Dia 1.xlsx", index=False)
